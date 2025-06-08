@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <pcf8574_esp.h>
 #include <Arduino.h>
+#include <ADS1X15.h>
 
 #define PCF_ADDR 0x20
 PCF857x expander(PCF_ADDR, &Wire);
