@@ -7,7 +7,7 @@
 #define PCF_ADDR     0x20      // endereço do PCF8574
 #define ADS_ADDR     0x48      // endereço do ADS1115
 #define LED_PIN      0         // P0 do PCF8574
-#define T_THRESHOLD  40.0f     // °C para acionar o LED
+#define T_THRESHOLD  30.0f     // °C para acionar o LED
 
 // -------------------------------------------------
 // Constantes do divisor de tensão (PT100K em cima)
