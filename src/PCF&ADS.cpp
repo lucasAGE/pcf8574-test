@@ -8,11 +8,14 @@
 #define LED_PIN      0         // P0 do PCF8574
 #define T_THRESHOLD  40.0f     // °C para acionar o LED
 
-// Constantes para PT100
+// Constantes do divisor de tensão
+const float VCC    = 5.0f;        // tensão de alimentação do divisor
+const float R_REF  = 10000.0f;    // 10 kΩ resistor de referência
+
+// Constantes do PT100
 const float R0      = 100.0f;        // resistência em 0 °C
 const float A_coef  = 3.9083e-3f;    // coeficiente A
 const float B_coef  = -5.775e-7f;    // coeficiente B
-const float I_EXC   = 0.001f;        // corrente de excitação 1 mA
 
 // LSB do ADS1115 em ±6.144 V, ganho 1×
 const float ADS_LSB = 0.1875e-3f;    // 0.1875 mV por count
@@ -22,16 +25,16 @@ ADS1115 ADS(ADS_ADDR);
 
 // Converte raw ADC → Volts → Resistência PT100 → Temperatura em °C
 float rawToCelsius(int16_t raw) {
-  // 1) raw → tensão
-  float volts = raw * ADS_LSB;
+  // 1) raw → tensão no nó do divisor
+  float Vnode = raw * ADS_LSB;
 
-  // 2) tensão → resistência (I constante)
-  float Rpt = volts / I_EXC;
+  // 2) divisor: Rpt = Rref * Vnode / (Vcc - Vnode)
+  float Rpt = R_REF * Vnode / (VCC - Vnode);
 
-  // 3) Callendar–Van Dusen (T >= 0 °C)
+  // 3) Callendar–Van Dusen invertida (apenas para T >= 0 °C)
   float Z    = 1.0f - (Rpt / R0);
   float disc = A_coef * A_coef - 4.0f * B_coef * Z;
-  if (disc < 0) return -1000.0f;      // fora do range válido
+  if (disc < 0) return -1000.0f;      // fora de faixa válido
   float T    = (-A_coef + sqrt(disc)) / (2.0f * B_coef);
   return T;
 }
@@ -40,16 +43,16 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
 
-  // PCF8574
+  // Inicializa o PCF8574
   expander.begin();
   expander.write8(0xFF);   // coloca todos em HIGH (LED apagado)
 
-  // ADS1115
+  // Inicializa o ADS1115
   ADS.begin();
   ADS.setGain(0);           // ±6.144 V full-scale
   ADS.setDataRate(7);       // 860 SPS
   ADS.setMode(0);           // modo contínuo
-  ADS.readADC(0);           // dispara a primeira conversão
+  ADS.readADC(0);           // dispara a primeira conversão em AIN0
 }
 
 void loop() {
