@@ -21,26 +21,59 @@ float voltageToCelsius(float v) {
   return (v / 3.3) * 100.0;
 }
 
+// Varre o barramento I²C e imprime todos os dispositivos ACK
+void scanI2CBus() {
+  Serial.println("🔍 Escaneando barramento I2C...");
+  uint8_t count = 0;
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      Serial.print("  • Dispositivo encontrado em 0x");
+      if (addr < 16) Serial.print('0');
+      Serial.print(addr, HEX);
+      Serial.println();
+      count++;
+    }
+  }
+  if (!count) Serial.println("  (nenhum dispositivo detectado)");
+  Serial.println("🔍 Scan concluído\n");
+}
+
 void setup() {
   Serial.begin(115200);
+  while (!Serial) ;  // aguarda porta Serial
+  Serial.println("\n=== Iniciando debug ADS1115 + PCF8574 ===");
+
   Wire.begin();
   Wire.setClock(10000);               // I²C em 10 kHz :contentReference[oaicite:3]{index=3}
 
-  // ——— ADS1115 ———
+  // — Varredura I2C —
+  scanI2CBus();
+
+  // — ADS1115 —
+  Serial.print("📟 Iniciando ADS1115... ");
   if (!ads.begin()) {
-    Serial.println("Erro: ADS1115 não detectado");
+    Serial.println("❌ NÃO detectado!");
     while (1) yield();
   }
+  Serial.println("✅ detectado");
   ads.setWireClock(10000);            // reforce 10 kHz no driver :contentReference[oaicite:4]{index=4}
   ads.setGain(ADS1X15_GAIN_2048MV);    // ganho 0 → ±6.144 V (menor amplificação) :contentReference[oaicite:5]{index=5}
   ads.setMode(1);                      // modo single-shot
   ads.setDataRate(0);                  // 128 SPS (bom p/ termistores)
 
-  // ——— PCF8574 ———
-  if (!pcf.begin(PCF8574_INITIAL_VALUE)) {
-    Serial.println("Erro: PCF8574 não detectado");
+   // — PCF8574 —
+  Serial.print("🔌 Iniciando PCF8574... ");
+  if (!pcf.begin(0xFF)) {  // 0xFF = todas entradas (high)
+    Serial.println("❌ NÃO detectado!");
     while (1) yield();
   }
+  Serial.println("✅ detectado");
+  Serial.print("  • Endereço: 0x"); Serial.println(PCF_ADDRESS, HEX);
+  uint8_t portState = pcf.read8();  // lê todas as 8 portas
+  Serial.print("  • Estado inicial (GPIO0–7): 0b");
+  Serial.println(portState, BIN);
+  
   // Inicializa P0–P3 como saída (escreve LOW)
   for (uint8_t i = 0; i < 4; i++) {
     pcf.write(LED_PINS[i], LOW);      // write(pin, value) :contentReference[oaicite:6]{index=6}
@@ -59,9 +92,21 @@ void loop() {
     Serial.print("Canal A"); Serial.print(ch);
     Serial.print(": "); Serial.print(temp, 2); Serial.println(" °C");
 
-    // Liga/desliga LED conforme limiar
-    pcf.write(LED_PINS[ch], temp >= TEMP_THRESHOLD ? HIGH : LOW);
+    // Aciona LED via PCF
+    bool ledOn = (temp >= TEMP_THRESHOLD);
+    pcf.write(LED_PINS[ch], ledOn ? HIGH : LOW);
+
+    // Debug PCF8574
+    bool state = pcf.read(LED_PINS[ch]);
+    Serial.print("  • LED P"); Serial.print(ch);
+    Serial.print(" estado físico: "); Serial.println(state ? "ON" : "OFF");
   }
+
+  // Estado completo do PCF8574 a cada ciclo
+  uint8_t fullState = pcf.read8();
+  Serial.print("Porta PCF8574 inteira: 0b");
+  Serial.println(fullState, BIN);
+
   Serial.println();
   delay(1000);
 }
