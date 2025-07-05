@@ -32,9 +32,9 @@ void setup() {
     while (1) yield();
   }
   ads.setWireClock(10000);            // reforce 10 kHz no driver :contentReference[oaicite:4]{index=4}
-  ads.setGain(ADS1X15_GAIN_6144MV);    // ganho 0 → ±6.144 V (menor amplificação) :contentReference[oaicite:5]{index=5}
+  ads.setGain(ADS1X15_GAIN_2048MV);    // ganho 0 → ±6.144 V (menor amplificação) :contentReference[oaicite:5]{index=5}
   ads.setMode(1);                      // modo single-shot
-  ads.setDataRate(4);                  // 128 SPS (bom p/ termistores)
+  ads.setDataRate(0);                  // 128 SPS (bom p/ termistores)
 
   // ——— PCF8574 ———
   if (!pcf.begin(PCF8574_INITIAL_VALUE)) {
