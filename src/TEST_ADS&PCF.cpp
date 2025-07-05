@@ -18,7 +18,7 @@ const float TEMP_THRESHOLD = 30.0;
 
 // Converte tensão em °C (0–3,3 V → 0–100 °C). Ajuste conforme seu divisor/termistor.
 float voltageToCelsius(float v) {
-  return (v / 3.3) * 100.0;
+  return (1.0 - (v / 5)) * 100.0;
 }
 
 // Varre o barramento I²C e imprime todos os dispositivos ACK
